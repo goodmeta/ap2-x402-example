@@ -1,0 +1,20 @@
+{
+  "name": "@goodmeta/ap2-x402-example",
+  "version": "1.0.0",
+  "description": "Educational example: AP2 mandates with x402 settlement",
+  "type": "module",
+  "scripts": {
+    "cart-flow": "tsx src/cart-mandate-flow.ts",
+    "intent-flow": "tsx src/intent-mandate-flow.ts",
+    "merchant": "tsx src/merchant-server.ts"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  },
+  "dependencies": {
+    "viem": "^2.23.0",
+    "express": "^5.0.0",
+    "@types/express": "^5.0.0"
+  }
+}
