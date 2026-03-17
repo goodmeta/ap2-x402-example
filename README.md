@@ -1,6 +1,6 @@
-# AP2 + x402 Example
+# AP2 + x402: Agentic Commerce Middleware
 
-Educational examples showing how [AP2](https://ap2-protocol.org/) (Agent Payments Protocol) and [x402](https://www.x402.org/) work together — AP2 handles authorization, x402 handles settlement.
+AP2 merchant middleware + educational examples showing how [AP2](https://ap2-protocol.org/) (Agent Payments Protocol) and [x402](https://www.x402.org/) work together — AP2 handles authorization, x402 handles settlement.
 
 ## What is AP2?
 
@@ -29,11 +29,75 @@ AP2 answers all three with **Mandates** — cryptographically signed permission 
 
 AP2 provides the **authorization wrapper**. x402 is one of the **settlement rails** inside AP2 (alongside Visa, Mastercard, Stripe, etc).
 
-## Examples
+## AP2 Merchant Middleware
+
+Drop-in Express middleware that makes any merchant agent-purchasable. One function call adds:
+
+- `GET /.well-known/agent-card.json` — agent discovery
+- `GET /ap2/catalog` — structured product catalog
+- `POST /ap2/mandates/cart` — cart mandate (human approves)
+- `POST /ap2/mandates/cart/:id/approve` — process approved cart
+- `POST /ap2/mandates/intent/verify` — intent mandate (autonomous agent)
+- `GET /ap2/orders/:id` — order status
+
+```typescript
+import { createAP2Middleware } from "./middleware/index.js";
+
+app.use(createAP2Middleware({
+  merchant: {
+    name: "My Store",
+    url: "https://mystore.com",
+    paymentAddress: "0x...",
+    signingKey: process.env.MERCHANT_KEY,
+    description: "What we sell",
+    paymentRails: ["x402", "card"],
+    categories: ["products"],
+  },
+  catalog: () => myProducts,
+}));
+```
+
+### Run the demo merchant
+
+```bash
+npm install
+npm run merchant       # start demo coffee shop (port 3000)
+npm run agent-demo     # agent discovers, browses, and buys
+```
+
+The agent demo shows the full flow: discovery → catalog → cart mandate (human-approved purchase) → intent mandate (autonomous purchase) → overspend denial.
+
+## Prospect Demos
+
+Industry-specific demos showing how AP2 middleware applies to real companies:
+
+### Ramp — Corporate Expense Agent Controls
+
+```bash
+npm run demo:ramp
+```
+
+Department-level spending controls as AP2 Intent Mandates. Shows engineering vs marketing budgets, vendor allowlists/blocklists, and compliance audit trail. Demonstrates how AP2 extends Ramp's Agent Cards to native-web payment rails (x402) for SaaS/API micropayments where Visa adds friction.
+
+### Square — From "Agent Can Browse" to "Agent Can Buy"
+
+```bash
+npm run demo:square
+```
+
+Square's MCP server lets agents read catalog and orders, but can't complete purchases. This demo shows the middleware bridging that gap — same catalog data, but agents can now buy. Includes human-approved lunch order and autonomous office coffee agent.
+
+### Coupa — Enterprise Procurement Agents
+
+```bash
+npm run demo:coupa
+```
+
+Maps Coupa's spending policies 1:1 to AP2 Intent Mandates. Multi-department budgets, approved vendor lists, category restrictions, and escalation workflows. Shows how procurement agents buy autonomously within corporate policy with cryptographic audit trail.
+
+## Educational Examples
 
 ### Cart Mandate Flow (human present)
-
-User is watching. Agent finds an item, merchant commits to a price, user approves.
 
 ```bash
 npm run cart-flow
@@ -45,8 +109,6 @@ Merchant signs cart → User approves → Payment Mandate → x402 settles
 
 ### Intent Mandate Flow (autonomous agent)
 
-User pre-authorizes spending constraints, then walks away. Agent shops alone.
-
 ```bash
 npm run intent-flow
 ```
@@ -56,28 +118,31 @@ User signs intent ("$30 max, $100/month") → Agent finds deal →
 Validates against constraints → Pays via x402 → Budget updated
 ```
 
-The intent flow also demonstrates constraint enforcement — the agent is **denied** when it tries to overspend.
+## Project Structure
 
-## AP2 Concepts Covered
-
-| Concept | File | What it shows |
-|---------|------|---------------|
-| **Cart Mandate** | `src/cart-mandate-flow.ts` | Merchant price commitment + user approval |
-| **Intent Mandate** | `src/intent-mandate-flow.ts` | Pre-authorized autonomous spending |
-| **Payment Mandate** | `src/ap2-signer.ts` | Derived credential for payment networks |
-| **Constraint validation** | `src/intent-mandate-flow.ts` | Budget, per-tx limits, merchant allowlists |
-| **EIP-712 signing** | `src/ap2-signer.ts` | Same crypto primitive as x402 permits |
-| **Type definitions** | `src/ap2-types.ts` | Full mandate type system |
-
-## Quick Start
-
-```bash
-npm install
-npm run cart-flow     # human-present flow
-npm run intent-flow   # autonomous agent flow
 ```
+src/
+  middleware/              # AP2 Merchant Middleware (the product)
+    index.ts              # Main factory: createAP2Middleware()
+    types.ts              # MerchantConfig, CatalogItem, Order
+    agent-card.ts         # Agent Card publisher
+    mandate-verifier.ts   # Signature verification + constraint checking
+    payment-router.ts     # Multi-rail routing (x402/card/bank)
 
-No wallet or testnet tokens needed — examples use generated keys for demonstration.
+  demo-merchant/          # Demo merchant using middleware
+    server.ts             # Coffee shop (20 lines of config)
+    agent-demo.ts         # Full agent purchase flow
+
+  demos/                  # Prospect-specific demos
+    ramp-corporate-expense.ts
+    square-merchant-upgrade.ts
+    coupa-procurement.ts
+
+  ap2-types.ts            # Core AP2 type system
+  ap2-signer.ts           # EIP-712 mandate signing
+  cart-mandate-flow.ts    # Educational: cart flow walkthrough
+  intent-mandate-flow.ts  # Educational: intent flow walkthrough
+```
 
 ## Further Reading
 
@@ -88,4 +153,4 @@ No wallet or testnet tokens needed — examples use generated keys for demonstra
 
 ## Built by
 
-[Good Meta](https://goodmeta.co) — agentic commerce integration services.
+[Good Meta](https://goodmeta.co) — agentic commerce infrastructure.

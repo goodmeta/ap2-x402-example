@@ -6,7 +6,11 @@
   "scripts": {
     "cart-flow": "tsx src/cart-mandate-flow.ts",
     "intent-flow": "tsx src/intent-mandate-flow.ts",
-    "merchant": "tsx src/merchant-server.ts"
+    "merchant": "tsx src/demo-merchant/server.ts",
+    "agent-demo": "tsx src/demo-merchant/agent-demo.ts",
+    "demo:ramp": "tsx src/demos/ramp-corporate-expense.ts",
+    "demo:square": "tsx src/demos/square-merchant-upgrade.ts",
+    "demo:coupa": "tsx src/demos/coupa-procurement.ts"
   },
   "devDependencies": {
     "tsx": "^4.19.0",
