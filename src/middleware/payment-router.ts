@@ -1,102 +1,61 @@
 /**
  * Payment Router
  *
- * Routes verified mandates to the appropriate payment rail.
- * This is the multi-rail piece — most processors only handle their own rail.
- * The middleware handles x402, card, and bank, routing based on mandate preferences.
+ * Settles an already-VERIFIED payment over the merchant's rail. AP2 handles
+ * authorization (did the user approve this?); the rail handles settlement (move
+ * the money). This example stubs settlement — wiring a real rail is the only
+ * production gap, and it's deliberately out of scope for an AP2 verification demo.
  */
 
-import type { PaymentMandate } from "../ap2-types.js";
 import type { PaymentResult, MerchantConfig } from "./types.js";
+import type { VerifiedPayment } from "../verify-mandate.js";
+
+type Payment = NonNullable<VerifiedPayment["payment"]>;
+
+const txId = (rail: string) => `${rail}_${Date.now().toString(36)}_${Math.floor(Math.random() * 1e6).toString(36)}`;
 
 /**
- * Default x402 payment processor.
- * In production, this calls the facilitator to settle on-chain.
+ * x402 settlement (stub). A real implementation POSTs the verified payment to
+ * an x402 facilitator's `/settle`, which submits the agent's signed USDC
+ * authorization on-chain. x402's EVM `exact` scheme uses an EIP-3009
+ * `transferWithAuthorization` signature (NOT an ERC-2612 permit) — that signing
+ * happens agent-side, before the agent presents the AP2 mandate here.
  */
-async function processX402(
-  _mandate: PaymentMandate,
-  config: MerchantConfig
-): Promise<PaymentResult> {
+async function processX402(_payment: Payment, config: MerchantConfig): Promise<PaymentResult> {
   if (!config.x402) {
-    return {
-      success: false,
-      rail: "x402",
-      error: "x402 not configured for this merchant",
-    };
+    return { success: false, rail: "x402", error: "x402 not configured for this merchant" };
   }
-
-  // In production: call facilitator API to verify permit and settle on-chain
-  // POST ${config.x402.facilitatorUrl}/settle
-  // { permit: mandate.x402.permitSignature, amount, payTo, chain, asset }
-  //
-  // For the POC, we simulate settlement. In production, this would verify
-  // the ERC-2612 permit signature and submit it on-chain.
-  return {
-    success: true,
-    rail: "x402",
-    transactionId: `x402_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-  };
+  // POST ${config.x402.facilitatorUrl}/settle { authorization, amount, payTo, asset }
+  return { success: true, rail: "x402", transactionId: txId("x402") };
 }
 
-/**
- * Default card payment processor (stub).
- * In production, this calls Stripe/Adyen/Square with the card token.
- */
-async function processCard(
-  _mandate: PaymentMandate
-): Promise<PaymentResult> {
-  // In production: call Stripe API with payment intent
-  // const intent = await stripe.paymentIntents.create({ amount, currency, ... })
-
-  return {
-    success: true,
-    rail: "card",
-    transactionId: `card_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-  };
+/** Card settlement (stub) — production calls Stripe/Adyen/Square. */
+async function processCard(_payment: Payment): Promise<PaymentResult> {
+  return { success: true, rail: "card", transactionId: txId("card") };
 }
 
-/**
- * Default bank payment processor (stub).
- * In production, this initiates ACH/wire transfer.
- */
-async function processBank(
-  _mandate: PaymentMandate
-): Promise<PaymentResult> {
-  return {
-    success: true,
-    rail: "bank",
-    transactionId: `bank_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-  };
+/** Bank settlement (stub) — production initiates ACH/wire. */
+async function processBank(_payment: Payment): Promise<PaymentResult> {
+  return { success: true, rail: "bank", transactionId: txId("bank") };
 }
 
-/**
- * Route a payment mandate to the appropriate rail and process it.
- */
-export async function routePayment(
-  mandate: PaymentMandate,
-  config: MerchantConfig
+/** Settle a verified payment over a merchant-accepted rail. */
+export async function settlePayment(
+  payment: Payment,
+  rail: "x402" | "card" | "bank",
+  config: MerchantConfig,
 ): Promise<PaymentResult> {
-  // Verify the merchant accepts this rail
-  if (!config.paymentRails.includes(mandate.rail)) {
-    return {
-      success: false,
-      rail: mandate.rail,
-      error: `Merchant does not accept ${mandate.rail} payments`,
-    };
+  if (!config.paymentRails.includes(rail)) {
+    return { success: false, rail, error: `Merchant does not accept ${rail} payments` };
   }
-
-  switch (mandate.rail) {
+  switch (rail) {
     case "x402":
-      return processX402(mandate, config);
+      return processX402(payment, config);
     case "card":
-      return processCard(mandate);
+      return processCard(payment);
     case "bank":
-      return processBank(mandate);
+      return processBank(payment);
     default:
-      return {
-        success: false,
-        rail: mandate.rail,
-        error: `Unknown payment rail: ${mandate.rail}`,
-      };
+      return { success: false, rail, error: `Unknown payment rail: ${rail}` };
   }
 }

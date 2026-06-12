@@ -1,113 +1,67 @@
 /**
  * Demo Merchant Server
  *
- * A coffee shop that uses AP2 middleware to accept agent purchases.
- * This is what "agent-ready commerce" looks like — 20 lines of config,
- * everything else handled by the middleware.
+ * A coffee shop that accepts agent purchases by VERIFYING real AP2 mandates.
+ * "Agent-ready commerce" in ~20 lines of config — the middleware does the rest.
  *
  * Run: npm run merchant
+ * Then: npm run agent-demo  (an agent presents a real, pre-minted AP2 mandate)
  *
- * Then try:
- *   curl http://localhost:3000/.well-known/agent-card.json
- *   curl http://localhost:3000/ap2/catalog
- *   npm run agent-demo  (runs the full purchase flow)
+ * The merchant trusts one issuer (Alice's wallet key, from the minted coffee
+ * scenarios) and accepts the demo's pre-minted presentation nonces. In
+ * production it would issue nonces live via POST /ap2/payment-context and trust
+ * issuers via an x5c chain or a kid directory.
  */
 
 import express from "express";
-import { generatePrivateKey } from "viem/accounts";
 import { createAP2Middleware } from "../middleware/index.js";
 import type { CatalogItem, Order } from "../middleware/types.js";
+import { scenario, usd } from "../fixtures/scenarios.js";
 
-// --- Merchant config ---
-// In production, these come from env vars / config file
-const MERCHANT_KEY = generatePrivateKey();
 const PORT = 3000;
 
+// The issuer this merchant trusts + the nonces its pre-minted demo mandates use.
+const coffee = scenario("coffee_valid");
+const coffeeNonces = ["coffee_valid", "coffee_second", "coffee_over_amount"].map((n) => scenario(n).nonce);
+
 const catalog: CatalogItem[] = [
-  {
-    id: "ethiopian-yirgacheffe",
-    name: "Ethiopian Yirgacheffe (1lb)",
-    description: "Bright, fruity, floral. Single origin.",
-    price: "1800",
-    currency: "USDC",
-    category: "coffee",
-    inStock: true,
-  },
-  {
-    id: "colombian-supremo",
-    name: "Colombian Supremo (12oz)",
-    description: "Rich, nutty, balanced. Medium roast.",
-    price: "2200",
-    currency: "USDC",
-    category: "coffee",
-    inStock: true,
-  },
-  {
-    id: "kenya-aa",
-    name: "Kenya AA (1lb)",
-    description: "Bold, wine-like acidity. Complex.",
-    price: "2400",
-    currency: "USDC",
-    category: "coffee",
-    inStock: true,
-  },
-  {
-    id: "ceramic-v60",
-    name: "Ceramic V60 Dripper",
-    description: "Hario V60-02. White ceramic.",
-    price: "2800",
-    currency: "USDC",
-    category: "equipment",
-    inStock: true,
-  },
+  { id: "ethiopian-yirgacheffe", name: "Ethiopian Yirgacheffe (1lb)", description: "Bright, fruity, floral. Single origin.", price: "1800", currency: "USD", category: "coffee", inStock: true },
+  { id: "colombian-supremo", name: "Colombian Supremo (12oz)", description: "Rich, nutty, balanced. Medium roast.", price: "2200", currency: "USD", category: "coffee", inStock: true },
+  { id: "kenya-aa", name: "Kenya AA (1lb)", description: "Bold, wine-like acidity. Complex.", price: "2400", currency: "USD", category: "coffee", inStock: true },
 ];
 
-// --- Create Express app with AP2 middleware ---
 const app = express();
 
-const ap2 = createAP2Middleware({
-  merchant: {
-    name: "Coffee Roasters Co.",
-    url: `http://localhost:${PORT}`,
-    paymentAddress: "0x0000000000000000000000000000000000000001", // demo
-    signingKey: MERCHANT_KEY,
-    description: "Specialty coffee roaster. Single-origin beans and brewing equipment.",
-    paymentRails: ["x402", "card"],
-    categories: ["coffee", "equipment"],
-    x402: {
-      chain: "base-sepolia",
-      asset: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
-      facilitatorUrl: "https://x402-facilitator.goodmeta.co",
+app.use(
+  createAP2Middleware({
+    merchant: {
+      name: "Coffee Roasters Co.",
+      url: `http://localhost:${PORT}`,
+      paymentAddress: "0x0000000000000000000000000000000000000001", // demo
+      audience: coffee.audience, // "coffee-roasters" — agents bind their KB-JWT to this
+      trustedIssuerKeys: [coffee.rootKey], // Alice's wallet issuer key
+      description: "Specialty coffee roaster. Single-origin beans and brewing equipment.",
+      paymentRails: ["x402", "card"],
+      categories: ["coffee", "equipment"],
+      x402: { chain: "base-sepolia", asset: "0x036CbD53842c5426634e7929541eC2318f3dCF7e", facilitatorUrl: "https://x402-facilitator.goodmeta.co" },
     },
-  },
-  catalog: () => catalog,
-  onFulfillment: async (order: Order) => {
-    console.log(`\n📦 New order! ${order.id}`);
-    console.log(
-      `   Items: ${order.items.map((i) => `${i.quantity}x ${i.name}`).join(", ")}`
-    );
-    console.log(`   Total: $${(Number(order.total) / 100).toFixed(2)}`);
-    console.log(`   Paid via: ${order.paymentResult.rail}`);
-    console.log(`   Tx: ${order.paymentResult.transactionId}\n`);
-  },
-  debug: true,
-});
+    catalog: () => catalog,
+    preIssuedNonces: coffeeNonces, // demo: accept the pre-minted presentations' nonces
+    onFulfillment: async (order: Order) => {
+      console.log(`\n📦 Order ${order.id} — ${usd(order.amount)} ${order.currency} → ${order.payeeId}`);
+      console.log(`   tx ${order.transactionId} settled via ${order.paymentResult.rail}\n`);
+    },
+    debug: true,
+  }),
+);
 
-app.use(ap2);
-
-// --- Merchant's own routes (non-AP2) ---
 app.get("/", (_req, res) => {
-  res.json({
-    name: "Coffee Roasters Co.",
-    message: "Welcome! AI agents: check /.well-known/agent-card.json",
-    humanSite: "https://coffee-roasters.example.com",
-  });
+  res.json({ name: "Coffee Roasters Co.", message: "AI agents: see /.well-known/agent-card.json" });
 });
 
 app.listen(PORT, () => {
-  console.log(`\n☕ Coffee Roasters Co. — AP2-enabled merchant`);
-  console.log(`   http://localhost:${PORT}`);
+  console.log(`\n☕ Coffee Roasters Co. — AP2-enabled merchant (verifies real dSD-JWT mandates)`);
   console.log(`   Agent Card: http://localhost:${PORT}/.well-known/agent-card.json`);
-  console.log(`   Catalog:    http://localhost:${PORT}/ap2/catalog\n`);
-  console.log(`Waiting for agent purchases...\n`);
+  console.log(`   Catalog:    http://localhost:${PORT}/ap2/catalog`);
+  console.log(`\nWaiting for agent presentations (run: npm run agent-demo)...\n`);
 });

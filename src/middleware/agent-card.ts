@@ -1,10 +1,9 @@
 /**
  * Agent Card Publisher
  *
- * Serves /.well-known/agent-card.json — the machine-readable description
- * that lets AI agents discover this merchant and understand how to buy.
- *
- * Without this, your store is invisible to agent commerce.
+ * Serves /.well-known/agent-card.json — the machine-readable description that
+ * lets AI agents discover this merchant, learn its AP2 audience, and understand
+ * how to present a mandate for verification.
  */
 
 import type { Request, Response } from "express";
@@ -19,15 +18,24 @@ export interface AgentCard {
     categories: string[];
   };
   capabilities: {
-    mandateTypes: string[];
+    /** The AP2 mandate format this merchant verifies (real dSD-JWT payment mandates). */
+    mandateFormat: "ap2-dsd-jwt";
+    /** The closed-mandate `vct` accepted on /ap2/verify. */
+    acceptedVct: string;
     paymentRails: string[];
     catalog: boolean;
   };
+  ap2: {
+    /** The audience an agent's KB-JWT must bind to when presenting to this merchant. */
+    audience: string;
+  };
   endpoints: {
     catalog: string;
-    cartMandate: string;
-    intentVerify: string;
-    pay: string;
+    /** Ask for a single-use nonce to bind a presentation to. */
+    paymentContext: string;
+    /** Present a dSD-JWT mandate chain for verification + settlement. */
+    verify: string;
+    orders: string;
   };
 }
 
@@ -41,22 +49,25 @@ export function buildAgentCard(config: MerchantConfig, baseUrl: string): AgentCa
       categories: config.categories,
     },
     capabilities: {
-      mandateTypes: ["cart-mandate", "intent-mandate"],
+      mandateFormat: "ap2-dsd-jwt",
+      acceptedVct: "mandate.payment.1",
       paymentRails: config.paymentRails,
       catalog: true,
     },
+    ap2: {
+      audience: config.audience,
+    },
     endpoints: {
       catalog: `${baseUrl}/ap2/catalog`,
-      cartMandate: `${baseUrl}/ap2/mandates/cart`,
-      intentVerify: `${baseUrl}/ap2/mandates/intent/verify`,
-      pay: `${baseUrl}/ap2/pay`,
+      paymentContext: `${baseUrl}/ap2/payment-context`,
+      verify: `${baseUrl}/ap2/verify`,
+      orders: `${baseUrl}/ap2/orders`,
     },
   };
 }
 
 export function agentCardHandler(config: MerchantConfig, baseUrl: string) {
   const card = buildAgentCard(config, baseUrl);
-
   return (_req: Request, res: Response) => {
     res.json(card);
   };
@@ -67,7 +78,7 @@ export function catalogHandler(catalogProvider: CatalogProvider) {
     try {
       const items = await catalogProvider();
       res.json({ items });
-    } catch (err) {
+    } catch {
       res.status(500).json({ error: "Failed to load catalog" });
     }
   };

@@ -4,21 +4,22 @@
   "description": "Educational example: AP2 mandates with x402 settlement",
   "type": "module",
   "scripts": {
-    "cart-flow": "tsx src/cart-mandate-flow.ts",
-    "intent-flow": "tsx src/intent-mandate-flow.ts",
+    "verify": "tsx src/verify-flow.ts",
     "merchant": "tsx src/demo-merchant/server.ts",
     "agent-demo": "tsx src/demo-merchant/agent-demo.ts",
     "demo:ramp": "tsx src/demos/ramp-corporate-expense.ts",
     "demo:square": "tsx src/demos/square-merchant-upgrade.ts",
-    "demo:coupa": "tsx src/demos/coupa-procurement.ts"
+    "demo:coupa": "tsx src/demos/coupa-procurement.ts",
+    "test": "tsx src/verify.test.ts",
+    "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
     "tsx": "^4.19.0",
     "typescript": "^5.7.0"
   },
   "dependencies": {
-    "viem": "^2.23.0",
-    "express": "^5.0.0",
-    "@types/express": "^5.0.0"
+    "@goodmeta/agent-verifier": "0.5.0",
+    "@types/express": "^5.0.0",
+    "express": "^5.0.0"
   }
 }
