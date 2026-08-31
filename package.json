@@ -14,12 +14,12 @@
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
-    "tsx": "^4.19.0",
-    "typescript": "^5.7.0"
+    "tsx": "4.23.13",
+    "typescript": "7.0.2"
   },
   "dependencies": {
-    "@goodmeta/agent-verifier": "0.5.0",
-    "@types/express": "^5.0.0",
-    "express": "^5.0.0"
+    "@goodmeta/agent-verifier": "0.6.0",
+    "@types/express": "5.0.6",
+    "express": "5.2.1"
   }
 }
