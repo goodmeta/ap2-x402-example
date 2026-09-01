@@ -139,5 +139,20 @@
     "audience": "cdw.com",
     "nonce": "coupa-2",
     "expect": "deny:amount_range"
+  },
+  "coffee_budget_withheld": {
+    "description": "Same authorization as coffee_valid, but the payment.budget constraint was withheld from the disclosure. Crypto is valid and AP2 raises no violation, because a constraint that is not present is never evaluated.",
+    "chain": "eyJhbGciOiAiRVMyNTYiLCAidHlwIjogImV4YW1wbGUrc2Qtand0IiwgImtpZCI6ICJhbGljZSJ9.eyJkZWxlZ2F0ZV9wYXlsb2FkIjogW3siLi4uIjogInJoM0JKSTRqYzVmSTVGQ2loVGx6YW9BUm9RXzJzV1JoREVmTnVFWURybVEifV0sICJfc2RfYWxnIjogInNoYS0yNTYifQ.LoITOeCtHq_ToX6ENLfzQWjRekHj7-TZLZr2u22ynl07epBvIXcvoQH7XvVPEfp8nHmdvDcDKLpdb3F3hUZmBw~WyJna3kyclp3WE1IamtzUWRGY3ZHdFRBIiwgeyJ2Y3QiOiAibWFuZGF0ZS5wYXltZW50Lm9wZW4uMSIsICJjb25zdHJhaW50cyI6IFt7InR5cGUiOiAicGF5bWVudC5hbW91bnRfcmFuZ2UiLCAiY3VycmVuY3kiOiAiVVNEIiwgIm1heCI6IDUwMDB9XSwgImNuZiI6IHsiandrIjogeyJjcnYiOiAiUC0yNTYiLCAia2lkIjogImFsaWNlLWFnZW50IiwgImt0eSI6ICJFQyIsICJ4IjogIk9BZ0hWWVA3dVlaekh2dFNqRTA0VGlNeDBxXzllV3ZCakFjWFkwUC1tX28iLCAieSI6ICJkZEExSXBfR25QeW1XcEVkVVJaREZubmpMRUgydVFSS200b2Q0bjRCNTJNIn19fV0~~eyJhbGciOiAiRVMyNTYiLCAidHlwIjogImtiK3NkLWp3dCIsICJraWQiOiAiYWxpY2UtYWdlbnQifQ.eyJkZWxlZ2F0ZV9wYXlsb2FkIjogW3siLi4uIjogIkNxQzY0ZkFKbXVuLURsTlU3V2pvcENXY3lqVUxkQ1hjelFReklBV1E1bVUifV0sICJpYXQiOiAxNzgwMDAwMDAwLCAiYXVkIjogImNvZmZlZS1yb2FzdGVycyIsICJub25jZSI6ICJvcmRlci1ub25jZS13aXRoaGVsZCIsICJzZF9oYXNoIjogInlUZ3dLemkzaFdvdTZhZ2kycmlQZXJscWhqMXJCUzg1STlVaGIwT1pvcWMiLCAiX3NkX2FsZyI6ICJzaGEtMjU2In0.ovcitxRo7-EUy9X4Yp_cg3lLLUS2SKZmJ--0eBrqnBm03hfs5AlxJXbXoh-UKWZ3aYE8kfYlm7vOBpqxPpqwrQ~WyIxZms3S25EaDVqbnNTM1JsZEI3cnFRIiwgeyJ2Y3QiOiAibWFuZGF0ZS5wYXltZW50LjEiLCAidHJhbnNhY3Rpb25faWQiOiAib3JkX2NvZmZlZV93aXRoaGVsZCIsICJwYXllZSI6IHsiaWQiOiAiY29mZmVlLXJvYXN0ZXJzIiwgIm5hbWUiOiAiQ29mZmVlIFJvYXN0ZXJzIENvLiJ9LCAicGF5bWVudF9hbW91bnQiOiB7ImFtb3VudCI6IDIyMDAsICJjdXJyZW5jeSI6ICJVU0QifSwgInBheW1lbnRfaW5zdHJ1bWVudCI6IHsiaWQiOiAicGktdXNkYyIsICJ0eXBlIjogInN0YWJsZWNvaW4ifX1d~",
+    "rootKey": {
+      "crv": "P-256",
+      "kid": "alice",
+      "kty": "EC",
+      "x": "_q0bf59OSwsYxcaZqfsIlq0-rTWDdx6mVO9OTh5po_I",
+      "y": "xamCqFva0hynbOTbYzDO-5v_CV4n-LgyXFQOs8PDwSw"
+    },
+    "audience": "coffee-roasters",
+    "nonce": "order-nonce-withheld",
+    "expect": "approve",
+    "note": "AP2 approves this with no cap at all. A merchant that requires a budget must say so via MerchantTrust.requireConstraints; see AP2 issue #339."
   }
 }

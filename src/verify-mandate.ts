@@ -45,6 +45,23 @@ export interface MerchantTrust {
    * pin a single known issuer key per scenario.
    */
   resolveRootKey: (root: ap2.ParsedToken) => ap2.VerificationKey | null;
+  /**
+   * Constraint types this merchant refuses to settle without, e.g.
+   * `["payment.budget"]`.
+   *
+   * AP2 evaluates only the constraints PRESENT in the mandate. A holder may
+   * legitimately withhold one through selective disclosure, and the result is not
+   * an error: no evaluator is built, no violation is raised, and the payment is
+   * approved with no cap at all. An empty violation list cannot tell you the
+   * budget was respected, only that nothing checked it.
+   *
+   * Naming a constraint here makes that difference visible: if it is absent from
+   * the mandate, verification fails instead of silently approving unlimited
+   * spend. Optional, so omitting it keeps plain AP2 behaviour.
+   *
+   * Requires agent-verifier >= 0.6.1. See AP2 issue #339.
+   */
+  requireConstraints?: string[];
 }
 
 export interface VerifiedPayment {
@@ -204,7 +221,10 @@ export async function verifyPresentedMandate(
   const violations: string[] = [];
   for (const open of opens) {
     try {
-      violations.push(...ap2.verifyPaymentChain(ap2.parsePaymentChain([open, closed]), { mandateContext }));
+      violations.push(...ap2.verifyPaymentChain(ap2.parsePaymentChain([open, closed]), {
+        mandateContext,
+        requiredConstraints: trust.requireConstraints,
+      }));
     } catch (err) {
       violations.push((err as Error).message);
     }

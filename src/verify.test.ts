@@ -49,6 +49,34 @@ async function main() {
   const r2 = await verifyPresentedMandate({ mandateChain: second.chain, expectedNonce: second.nonce }, merchant, ledger);
   ok(r2.approved && r2.budget?.remainingCents === 10000 - 2200 - 3000, "remaining budget decrements correctly ($48 left of $100)");
 
+  // ── A withheld constraint must not read as a satisfied one (AP2 #339) ──────
+  // coffee_budget_withheld is a crypto-valid mandate whose payment.budget was
+  // withheld from the disclosure. AP2 raises no violation, because a constraint
+  // that is not present is never evaluated, so the payment is approved with no
+  // cap at all. A merchant that actually requires a budget says so.
+  console.log("\nwithheld constraint (AP2 #339):");
+  const withheld = scenario("coffee_budget_withheld");
+  const base: MerchantTrust = { audience: withheld.audience, resolveRootKey: () => withheld.rootKey as never };
+  const presented = { mandateChain: withheld.chain, expectedNonce: withheld.nonce };
+
+  const lenient = await verifyPresentedMandate(presented, base);
+  ok(lenient.approved, "plain AP2 approves it: nothing evaluated the missing budget");
+  ok(lenient.budget?.capCents === undefined, "  and it carries NO cap, so spend is unlimited");
+
+  const strict = await verifyPresentedMandate(presented, { ...base, requireConstraints: ["payment.budget"] });
+  ok(!strict.approved, "requiring payment.budget denies it instead of approving unlimited spend");
+  ok(!!strict.violations?.some((v) => v.includes("payment.budget")),
+     "  the denial names the constraint that was never evaluated");
+
+  // Requiring a constraint that IS present must not invent a violation.
+  const present = scenario("coffee_valid");
+  const strictOk = await verifyPresentedMandate(
+    { mandateChain: present.chain, expectedNonce: present.nonce },
+    { audience: present.audience, resolveRootKey: () => present.rootKey as never,
+      requireConstraints: ["payment.budget"] },
+  );
+  ok(strictOk.approved, "a mandate that DOES carry payment.budget still approves");
+
   console.log(`\n${pass} pass, ${fail} fail`);
   process.exit(fail ? 1 : 0);
 }

@@ -18,7 +18,7 @@
     "typescript": "7.0.2"
   },
   "dependencies": {
-    "@goodmeta/agent-verifier": "0.6.0",
+    "@goodmeta/agent-verifier": "0.6.1",
     "@types/express": "5.0.6",
     "express": "5.2.1"
   }
