@@ -1,6 +1,7 @@
 {
   "name": "@goodmeta/ap2-x402-example",
   "version": "1.0.0",
+  "license": "Apache-2.0",
   "description": "Educational example: AP2 mandates with x402 settlement",
   "type": "module",
   "scripts": {
